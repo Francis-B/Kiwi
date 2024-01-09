@@ -54,10 +54,10 @@ automatically saved as /path/to/file.fasta_digestedPeptides.csv.
 
 **To run from command line:**
 
-Linux users can run digestool from the terminal by typing:
+Linux users can run Kiwi from the terminal by typing:
 
 ```bash
-/path/to/digestool.py /path/to/file.fasta
+/path/to/digestion.py /path/to/file.fasta
 ```
 
 To show the help message:
