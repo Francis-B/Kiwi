@@ -1,4 +1,4 @@
-test.ipynb
-**.csv
-__pycache__/
+*.csv
 
+__pycache__/
+.vscode/

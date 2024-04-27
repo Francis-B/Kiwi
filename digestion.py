@@ -152,8 +152,8 @@ class Digestion:
                 all_peptides = self._join_sequences(base_sequences, miss)
                 # Filter all peptide with given threshold(s)
                 if len(all_peptides) > 0:
-                    self.peptides[id_] = {pep: '' for pep in all_peptides
-                                            if self._is_good_peptide(pep)}
+                    self.peptides[id_].extend([pep for pep in all_peptides
+                                                   if self._is_good_peptide(pep)])
 
                 miss += 1
 

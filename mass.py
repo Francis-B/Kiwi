@@ -38,6 +38,6 @@ aminoAcid = {
             'U': atom['C']*3 + atom['H']*7 + atom['N'] + atom['O']*2 + atom['Se'],
             "W": atom['C']*11 + atom['H']*10 + atom['N']*2 + atom['O'],
             "Y": atom['C']*9 + atom['H']*9 + atom['N'] + atom['O']*2,
-            'X': 120.1779,  # Mean Mass
+            # 'X': 120.1779,  # Mean Mass
             "V": atom['C']*5 + atom['H']*9 + atom['N'] + atom['O']
         }
