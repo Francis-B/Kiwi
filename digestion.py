@@ -37,6 +37,7 @@ class Digestion:
                        'max_length': Digestion._max_length,
                        'max_miscleavages': Digestion._max_miscleavages,
                        'max_mass': Digestion._max_mass,
+                       'clip_nterm_m': False
                        }
         self.proteins = reader.fasta_to_dict(self.fasta)
         self.peptides = {id: [] for id in self.proteins}
@@ -74,6 +75,10 @@ class Digestion:
 
     def set_max_mass(self, _mass):
         self.params['max_mass'] = float(_mass)
+    
+    
+    def set_clip_nterm_m(self, bool_):
+        self.params['clip_nterm_m'] = bool_
 
 
     def set_outdir(self, dir_):
@@ -106,10 +111,14 @@ class Digestion:
         if self.params['max_length'] is not None and \
            self.params['max_length'] < len(seq):
             return False
-        if self.params['max_mass'] is not None and \
-           self.params['max_mass'] < self._get_mass(seq):
+        try:
+            if self.params['max_mass'] is not None and \
+            self.params['max_mass'] < self._get_mass(seq):
+                return False
+        # Catch non-amino acid characters (such as X)
+        except KeyError:
             return False
-
+        
         return True
 
 
@@ -150,6 +159,16 @@ class Digestion:
             while miss <= self.params['max_miscleavages']:
                 # Join base sequences in function of actual miscleavage value
                 all_peptides = self._join_sequences(base_sequences, miss)
+                
+                if all_peptides == []:
+                    miss += 1
+                    continue
+                
+                # Also consider N-terminal peptide without its methionine
+                if not self.params['clip_nterm_m']:
+                    first_pep = all_peptides[0]
+                    all_peptides.append(re.sub(r'^[Mm]', '', first_pep))
+                
                 # Filter all peptide with given threshold(s)
                 if len(all_peptides) > 0:
                     self.peptides[id_].extend([pep for pep in all_peptides
@@ -186,6 +205,7 @@ if __name__=='__main__':
         run.set_max_length(args.max_length)
     run.set_max_miscleavages(args.miscleavages)
     run.set_max_mass(args.mass)
+    run.set_clip_nterm_m(args.clip_nterm_m)
     run.set_enzyme(args.enzyme)
     if args.output is not None:
         run.set_outdir(args.output)

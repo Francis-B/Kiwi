@@ -43,6 +43,11 @@ def parse_args():
             help='maximal molecular mass of peptide sequences (default: 4600 dalton)'
     )
     parser.add_argument(
+            '-c', '--clip_nterm_m',
+            action='store_true',
+            help='Do not consider sequences without it N-term methionine (default: False)'
+    )
+    parser.add_argument(
             '-u ', '--unique',
             action='store_true',
             help='add flag to inform if the peptides are unique or not'
