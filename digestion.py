@@ -3,28 +3,28 @@
 
 # ------------------------------------------------------------------------------
 """
-This script define the class Digestion which perform the in silico digestion and 
-check the uniqueness of peptide sequences. 
+This script define the class Digestion which perform the in silico digestion and
+check the uniqueness of peptide sequences.
 
 It contains also the lines for command line usage.
 """
-# ------------------------------------------------------------------------------
-import re
-from textwrap import dedent
-import numpy as np
 
+# ------------------------------------------------------------------------------
+from textwrap import dedent
+
+from enzyme import Enzyme
+from peptide import Peptide
 import reader
-import enzyme
-import mass
 import cli
 # ------------------------------------------------------------------------------
 
-class Digestion:
-    """ Instantiate this class to perform in silico digestion and find unique
-        peptide """
 
-# Default parameter. Can be change with self.set<param>(value)
-    _enzyme = 'trypsin' # See enzyme.py for more enzymes choice
+class Digestion:
+    """Instantiate this class to perform in silico digestion and find unique
+    peptide"""
+
+    # Default parameter. Can be change with self.set<param>(value)
+    _enzyme = "trypsin"  # See enzyme.py for more enzymes choice
     _min_length = 7
     _max_length = None
     _max_miscleavages = 1
@@ -32,171 +32,226 @@ class Digestion:
 
     def __init__(self, fasta):
         self.fasta = fasta
-        self.params = {'enzyme': Digestion._enzyme,
-                       'min_length': Digestion._min_length,
-                       'max_length': Digestion._max_length,
-                       'max_miscleavages': Digestion._max_miscleavages,
-                       'max_mass': Digestion._max_mass,
-                       'clip_nterm_m': False
-                       }
+        self.params = {
+            "enzyme": self.__class__._enzyme,
+            "min_length": self.__class__._min_length,
+            "max_length": self.__class__._max_length,
+            "max_miscleavages": self.__class__._max_miscleavages,
+            "max_mass": self.__class__._max_mass,
+            "clip_nterm_m": False,
+        }
         self.proteins = reader.fasta_to_dict(self.fasta)
-        self.peptides = {id: [] for id in self.proteins}
-        self.outdir = f'{fasta}_digestedPeptides.csv'
+        self.peptides = []
+        self.outdir = f"{fasta}_digestedPeptides.csv"
         self.is_unique = {}
-
 
     def __str__(self):
         return dedent(f"""\
                         Parameters:
 
-                        Enzyme: {self.params['enzyme']}
-                        Minimum peptide sequence length: {self.params['min_length']}
-                        Maximum peptide sequence length: {self.params['max_length']}
-                        Maximum of miscleavages: {self.params['max_miscleavages']}
-                        Maximum peptide's mass: {self.params['max_mass']}
+                        Enzyme: {self.params["enzyme"]}
+                        Minimum peptide sequence length: {self.params["min_length"]}
+                        Maximum peptide sequence length: {self.params["max_length"]}
+                        Maximum of miscleavages: {self.params["max_miscleavages"]}
+                        Maximum peptide's mass: {self.params["max_mass"]}
                         """)
 
-
     def set_enzyme(self, enzyme_name):
-        self.params['enzyme'] = enzyme_name.lower()
-
+        self.params["enzyme"] = enzyme_name.lower()
 
     def set_min_length(self, minimum):
-        self.params['min_length'] = int(minimum)
-
+        self.params["min_length"] = int(minimum)
 
     def set_max_length(self, maximum):
-        self.params['max_length'] = int(maximum)
-
+        self.params["max_length"] = int(maximum)
 
     def set_max_miscleavages(self, miscleavages):
-        self.params['max_miscleavages'] = int(miscleavages)
-
+        self.params["max_miscleavages"] = int(miscleavages)
 
     def set_max_mass(self, _mass):
-        self.params['max_mass'] = float(_mass)
-    
-    
-    def set_clip_nterm_m(self, bool_):
-        self.params['clip_nterm_m'] = bool_
+        self.params["max_mass"] = float(_mass)
 
+    def set_clip_nterm_m(self, bool_):
+        self.params["clip_nterm_m"] = bool_
 
     def set_outdir(self, dir_):
         self.outdir = dir_
 
-
     def _is_cleaved(self):
-        return len([pep for peptides in self.peptides.values() for pep in peptides]) != 0
+        """
+        Check if proteins were digested.
 
+        Returns
+        -------
+        bool
+            Wheter or not proteins were digested.
+        """
+        return len(self.peptides) != 0
 
-    def _get_mass(self, seq):
-        """Sum the mass of all residues and add the mass of H (N-terminal) and OH 
-         (C-terminus) to obtain the sequence mass"""
-        _mass = sum((mass.aminoAcid[aa] for aa in seq)) + mass.atom['H']*2 + mass.atom['O']
-        return round(_mass, 4)
+    def _is_valid_peptide(self, peptide):
+        """
+        Determine if peptide respect the given criteria.
 
-
-    def _join_sequences(self, base_sequences, miss):
-        """ Iterate through base sequences (fully digested peptide) and join miss+1 
-            adjacent sequences """
-        num_sequences = len(base_sequences)-miss  # Number of sequences to loop on
-        return [''.join(base_sequences[n:n+miss+1]) for n in range(num_sequences)]
-
-
-    def _is_good_peptide(self, seq):
-        """ Filter sequences with given threshold(s)"""
-        if self.params['min_length'] is not None and \
-           self.params['min_length'] > len(seq):
+        Parameters
+        ----------
+        peptide : Peptide
+            Peptide to check.
+        """
+        # Check length
+        if self.params["min_length"] is not None and self.params["min_length"] > len(
+            peptide
+        ):
             return False
-        if self.params['max_length'] is not None and \
-           self.params['max_length'] < len(seq):
+        # Check length
+        if self.params["max_length"] is not None and self.params["max_length"] < len(
+            peptide
+        ):
             return False
-        try:
-            if self.params['max_mass'] is not None and \
-            self.params['max_mass'] < self._get_mass(seq):
-                return False
-        # Catch non-amino acid characters (such as X)
-        except KeyError:
+        # Check mass
+        if (
+            self.params["max_mass"] is not None
+            and self.params["max_mass"] < peptide.get_mass()
+        ):
             return False
-        
+
         return True
 
+    def _get_valid_peptides(self, peptides):
+        """
+        Get the peptides that respect the given criteria.
 
-    def _format_line(self, peptide, id_, include_unique_flag=False):
-        if include_unique_flag:
-            uniqueness = 'unique' if self.is_unique[peptide] else 'non-unique'
-            return f'{peptide}, {id_}, {self._get_mass(peptide)}, {uniqueness}\n'
+        Parameters
+        ----------
+        peptides : list of Peptides
+            All peptides to check.
 
-        return f'{peptide}, {id_}, {self._get_mass(peptide)}\n'
+        Returns
+        -------
+        list of Peptide
+            All peptides that respect to previously-defined of defaut criteria.
+        """
+        return [peptide for peptide in peptides if self._is_valid_peptide(peptide)]
 
+    def _format_line(self, peptide, include_mass):
+        """
+        From the given peptide, get the information needed for the file.
 
-    def write(self, outdir=None):
-        """ Write results to a csv file """
+        Parameters
+        ----------
+        peptide : Peptide
+            Peptide object from which the information will be extracted.
+        include_mass : bool
+            Wheter or not to include mass in the file.
+
+        Returns
+        -------
+        str
+            Line to be written in the tsv file.
+        """
+        parent_proteins = ",".join(peptide.parent_proteins)
+        if include_mass:
+            return "\t".join([peptide.sequence, parent_proteins, peptide.mass]) + "\n"
+        else:
+            return "\t".join([peptide.sequence, parent_proteins]) + "\n"
+
+    def write(self, outdir=None, include_mass=False):
+        """
+        Write results to a file.
+
+        Parameters
+        ----------
+        outdir : str, optional
+            Output directory where to save the peptides list and attributes
+        include_mass : bool, default=False
+            Wheter or not to include peptide mass in the tsv file
+        """
         if not self._is_cleaved():
-            raise ValueError('No sequences found. Please use cleave_proteins() to generate sequences')
-
+            self.cleave_proteins()
         if outdir is not None:
             self.set_outdir(outdir)
 
-        include_unique_flag = len(self.is_unique) != 0
-
-        with open(self.outdir, 'w', encoding='UTF-8') as out_file:
-            for id_ in self.peptides:
-                for peptide in self.peptides[id_]:
-                    out_file.write(self._format_line(peptide, id_, include_unique_flag))
-
-
+        with open(self.outdir, "w", encoding="UTF-8") as out_file:
+            for peptide in self.peptides:
+                out_file.write(self._format_line(peptide, include_mass))
 
     def cleave_proteins(self):
-        """ Perform an in silico digestion of proteins with previously selected
-        or default parameters """
-        regexp = enzyme.cleavage_site[self.params['enzyme']]
+        """
+        Perform an in silico digestion of proteins with previously selected
+        or default parameters
 
-        for id_, protein_sequences in self.proteins.items():
-            # split protein into perfectly digested sequences
-            base_sequences = re.split(regexp, protein_sequences)
-            miss = 0
-            while miss <= self.params['max_miscleavages']:
-                # Join base sequences in function of actual miscleavage value
-                all_peptides = self._join_sequences(base_sequences, miss)
-                
-                if all_peptides == []:
-                    miss += 1
-                    continue
-                
-                # Also consider N-terminal peptide without its methionine
-                if not self.params['clip_nterm_m']:
-                    first_pep = all_peptides[0]
-                    all_peptides.append(re.sub(r'^[Mm]', '', first_pep))
-                
-                # Filter all peptide with given threshold(s)
-                if len(all_peptides) > 0:
-                    self.peptides[id_].extend([pep for pep in all_peptides
-                                                   if self._is_good_peptide(pep)])
+        Returns
+        -------
+        None
+            Update the self.peptides list
+        """
+        enzyme = Enzyme(self.params["enzyme"])
+        max_miscleavages = self.params["max_miscleavages"]
+        clip_nterm_m = self.params["clip_nterm_m"]
+        all_peptides = {}
 
-                miss += 1
+        for id_, protein_sequence in self.proteins.items():
+            # Digestion protein sequence and get peptides
+            peptides = [
+                Peptide(sequence, id_)
+                for sequence in enzyme.digest(
+                    protein_sequence, max_miscleavages, clip_nterm_m
+                )
+            ]
+            valid_peptides = self._get_valid_peptides(peptides)
 
+            # Update peptides' dictionary
+            for peptide in valid_peptides:
+                sequence = peptide.sequence
+                # Update parent protein list if peptide already exist
+                if sequence in all_peptides:
+                    all_peptides[sequence].add_parent_protein(id_)
+                # If peptide not yet in dictionary, add it
+                else:
+                    all_peptides[sequence] = peptide
 
-    def check_peptide_uniqueness(self):
-        """ Check if peptide sequences are unique in the whole fasta file (i.e. 
-            has no identical match in other proteins)"""
+        self.peptides = list(all_peptides.values())
 
-        # Get all peptides. Use set() to remove peptide duplicates from same protein (if any)
-        all_peptides = [peptide for peptides in self.peptides.values()
-                        for peptide in set(peptides)]
+    def get_uniques_peptides(self):
+        """
+        Get unique peptides.
 
-        # Find frequency of each peptide (does not account peptide duplicates from same protein)
-        peptides, count = np.unique(all_peptides, return_counts=True)
-        peptides_frequency = dict(zip(peptides, count))
+        Return
+        ------
+        list of str
+            List of unique peptide sequences.
+        """
+        return [peptide.sequence for peptide in self.peptides if peptide.is_unique()]
 
-        self.is_unique = {pep: (peptides_frequency[pep] == 1)
-                            for peptides in self.peptides.values() for pep in peptides}
-        
+    def get_shared_peptides(self):
+        """
+        Get shared peptides (i.e. peptide with multiple parent proteins)
+
+        Return
+        ------
+        list of str
+            List of shared peptide sequences.
+        """
+        return [
+            peptide.sequence for peptide in self.peptides if not peptide.is_unique()
+        ]
+
+    def get_peptide_degeneracy(self):
+        """
+        Get peptide degeneracy dict.
+
+        Return
+        ------
+        dict
+            A dictionary with peptide sequences as keys and boolean as key (True
+            if unique, False if not).
+        """
+        return {peptide.sequence: peptide.is_unique() for peptide in self.peptides}
+
 
 # ------------------------------------------------------------------------------
 # For command line usage
 
-if __name__=='__main__':
+if __name__ == "__main__":
     args = cli.parse_args()
 
     run = Digestion(args.fasta_file)
@@ -210,18 +265,20 @@ if __name__=='__main__':
     if args.output is not None:
         run.set_outdir(args.output)
 
-    print(dedent(f"""
+    print(
+        dedent(f"""
                 Performing digestion with: 
                 
-                min_length = {run.params['min_length']}
-                max_length = {run.params['max_length']}
-                enzyme = '{run.params['enzyme']}'
-                max_mass = {run.params['max_mass']}
-                max_miscleavages = {run.params['max_miscleavages']}
-                """))
+                min_length = {run.params["min_length"]}
+                max_length = {run.params["max_length"]}
+                enzyme = '{run.params["enzyme"]}'
+                max_mass = {run.params["max_mass"]}
+                max_miscleavages = {run.params["max_miscleavages"]}
+                """)
+    )
 
     run.cleave_proteins()
     if args.unique is True:
         run.check_peptide_uniqueness()
     run.write()
-    print(f'List of peptide sequences saved as {run.outdir}')
+    print(f"List of peptide sequences saved as {run.outdir}")
