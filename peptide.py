@@ -10,6 +10,9 @@ class Peptide:
     def __len__(self):
         return len(self.sequence)
 
+    def __repr__(self):
+        return f"Peptide({self.sequence})"
+
     def get_mass(self):
         """
         Sum the mass of all residues and add the mass of H (N-terminal) and OH

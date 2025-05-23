@@ -14,7 +14,7 @@ from textwrap import dedent
 
 from enzyme import Enzyme
 from peptide import Peptide
-import reader
+from protein import Protein
 import cli
 # ------------------------------------------------------------------------------
 
@@ -40,10 +40,13 @@ class Digestion:
             "max_mass": self.__class__._max_mass,
             "clip_nterm_m": False,
         }
-        self.proteins = reader.fasta_to_dict(self.fasta)
-        self.peptides = []
+        self.proteins = {}
+        self.peptides = {}
         self.outdir = f"{fasta}_digestedPeptides.csv"
         self.is_unique = {}
+
+        # Read fasta. Proteins will be added to self.proteins
+        self.fasta_to_dict(self.fasta)
 
     def __str__(self):
         return dedent(f"""\
@@ -76,6 +79,33 @@ class Digestion:
 
     def set_outdir(self, dir_):
         self.outdir = dir_
+
+    def fasta_to_dict(self, fasta_file):
+        """
+        Convert fasta file to python dictionary.
+
+        Parameters
+        ----------
+        fasta_file : str
+            Path to fasta file.
+
+        Returns
+        -------
+        None
+            Proteins are added to self.proteins
+        """
+        with open(fasta_file, "r", encoding="utf-8") as file:
+            sequence = ""
+            id_ = None
+            for line in file:
+                if line.startswith(">"):
+                    if id_ is not None:
+                        self.proteins[id_] = Protein(id_, sequence)
+                        sequence = ""
+
+                    id_ = line.split(" ")[0].strip(">")
+                else:
+                    sequence += line.strip("\n")
 
     def _is_cleaved(self):
         """
@@ -184,32 +214,34 @@ class Digestion:
         None
             Update the self.peptides list
         """
+
         enzyme = Enzyme(self.params["enzyme"])
         max_miscleavages = self.params["max_miscleavages"]
         clip_nterm_m = self.params["clip_nterm_m"]
-        all_peptides = {}
 
-        for id_, protein_sequence in self.proteins.items():
+        for protein in self.proteins.values():
             # Digestion protein sequence and get peptides
+            id_ = protein.get_id()
+
             peptides = [
                 Peptide(sequence, id_)
                 for sequence in enzyme.digest(
-                    protein_sequence, max_miscleavages, clip_nterm_m
+                    protein.sequence, max_miscleavages, clip_nterm_m
                 )
             ]
             valid_peptides = self._get_valid_peptides(peptides)
 
-            # Update peptides' dictionary
+            # Update peptides' dictionary and add peptides to protein object
             for peptide in valid_peptides:
-                sequence = peptide.sequence
                 # Update parent protein list if peptide already exist
-                if sequence in all_peptides:
-                    all_peptides[sequence].add_parent_protein(id_)
+                if peptide.sequence in self.peptides:
+                    self.peptides[peptide.sequence].add_parent_protein(id_)
                 # If peptide not yet in dictionary, add it
                 else:
-                    all_peptides[sequence] = peptide
+                    self.peptides[peptide.sequence] = peptide
 
-        self.peptides = list(all_peptides.values())
+            # Add peptides to the Protein object
+            protein.add_peptides(valid_peptides)
 
     def get_uniques_peptides(self):
         """
@@ -220,7 +252,11 @@ class Digestion:
         list of str
             List of unique peptide sequences.
         """
-        return [peptide.sequence for peptide in self.peptides if peptide.is_unique()]
+        return [
+            peptide.sequence
+            for peptide in self.peptides.values()
+            if peptide.is_unique()
+        ]
 
     def get_shared_peptides(self):
         """
@@ -232,7 +268,9 @@ class Digestion:
             List of shared peptide sequences.
         """
         return [
-            peptide.sequence for peptide in self.peptides if not peptide.is_unique()
+            peptide.sequence
+            for peptide in self.peptides.values
+            if not peptide.is_unique()
         ]
 
     def get_peptide_degeneracy(self):
@@ -245,7 +283,9 @@ class Digestion:
             A dictionary with peptide sequences as keys and boolean as key (True
             if unique, False if not).
         """
-        return {peptide.sequence: peptide.is_unique() for peptide in self.peptides}
+        return {
+            peptide.sequence: peptide.is_unique() for peptide in self.peptides.values()
+        }
 
 
 # ------------------------------------------------------------------------------
