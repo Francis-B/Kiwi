@@ -9,12 +9,5 @@ protein = list(digestion.proteins.values())[0]
 
 protein.get_peptides()
 
-"abcdefgh".find("cd")
-
-positions = []
-for peptide in protein.get_peptides():
-    start = protein.sequence.find(peptide.sequence)
-    end = start + len(peptide)
-    positions.append((start, end))
-
-print(positions)
+len(protein)
+protein.get_detectable_loc("all")

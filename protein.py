@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -6,6 +7,12 @@ class Protein:
         self.id = id_
         self.sequence = sequence
         self.peptides = []
+
+    def __repr__(self):
+        return f"Protein({self.sequence})"
+
+    def __len__(self):
+        return len(self.sequence)
 
     def get_id(self):
         return self.id
@@ -50,9 +57,9 @@ class Protein:
         """
         return [peptide for peptide in self.peptides if not peptide.is_unique()]
 
-    def get_positions(self, peptide_type):
+    def get_detectable_loc(self, peptide_type):
         """
-        Get the position of all peptides. Position of adjacent peptides will be
+        Get the detectable portions of the protein. Position of adjacent peptides will be
         merged.
 
         Parameters
@@ -60,6 +67,11 @@ class Protein:
         peptide_type : str
             Type of peptide for which to position are to be retrieved. Options
             are "all", "unique" and "shared".
+        Returns
+        numpy.Array
+            Array of same length as protein sequence. If the a.a. is covered by a
+            peptide of type peptide_type, the corresponding value in array will
+            be 1.
         """
         if peptide_type == "all":
             peptides = self.get_peptides()
@@ -71,14 +83,14 @@ class Protein:
             print(peptide_type, " is not a valid option.")
             return
 
-        positions = []
+        loc = np.loc = np.zeros(len(self.sequence))
         for peptide in peptides:
-            start = self.sequence.fint(peptide.sequence)
+            start = self.sequence.find(peptide.sequence)
             end = start + len(peptide)
-            positions.append((start, end))
+            loc[start:end] = 1
 
         # TODO: Concatenate all adjacent positions
-        return positions
+        return loc
 
     def plot_peptides_map(self):
         """
