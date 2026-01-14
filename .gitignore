@@ -1,4 +1,10 @@
 *.csv
 
+
+# Compiled code and other automatically created files
 __pycache__/
-.vscode/
+**/*egg-info/
+**/build/
+
+data/
+

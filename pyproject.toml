@@ -1,0 +1,28 @@
+
+[project]
+name = "kiwi"
+version = "1.0.0"
+authors = [
+  {name = "Francis Bourassa", email = "Francis.bourassa@usherbrooke.ca"},
+]
+description="Fast regex-based protein digestion tool"
+requires-python = ">=3.6"
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/Francis-B/Kiwi"
+"Bug Tracker" = "https://github.com/Francis-B/Kiwi/issues"
+
+[project.scripts]
+kiwi = "kiwi.cli:main"
+
+[tool.pyright]
+reportPrivateImportUsage = "none"
+reportOptionalSubscript = "none"
+reportOptionalMemberAccess = "none"
+reportOptionalMemberAccessIssue = "none" 
+reportAttributeAccessIssus = "none"
+reportOptionalIterable = "none"

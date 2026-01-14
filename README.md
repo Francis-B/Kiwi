@@ -11,6 +11,20 @@ The digestion can be tuned with the following parameters:
 - Maximal molecular mass of the peptide sequences;
 - Number of miscleavages allowed;
 
+## Installation
+
+To install Kiwi as a module, go the to root directory of the repository and run:
+
+```
+pip install ./
+```
+
+If you wish to modify the scripts, you can also install it as an editable module:
+
+```
+pip install -e ./
+```
+
 ## Instructions
 
 To use it, clone or download this repository.
@@ -24,27 +38,27 @@ from digestion import Digestion
 #-------------------------------------------------------------------------------
 
 fastaFile = '/path/to/file.fasta'
-digestion = Digestion(fastaFile) # Create an instance with default parameters and the
+experiment = Experiment(fastaFile) # Create an instance with default parameters and the
                                  # protein sequences dictionary
 
 # Change parameters
-digestion.set_min_length(<int>)
-digestion.set_max_length(<int>)
-digestion.set_max_mass(<float>)
-digestion.set_max_miscleavages(<int>)
-digestion.set_outdir(<filepath>)
-digestion.set_enzyme(<str>)  # Implemented enzymes can be found in enzyme.py
+experiment.set_min_length(<int>)
+experiment.set_max_length(<int>)
+experiment.set_max_mass(<float>)
+experiment.set_max_miscleavages(<int>)
+experiment.set_outdir(<filepath>)
+experiment.set_enzyme(<str>)  # Implemented enzymes can be found in enzyme.py
 
 # Print parameters
-print(digestion)
+print(experiment)
 
 # Running
-digestion.cleave_proteins()
-digestion.check_sequences_uniqueness()
-digestion.write()  # write the result into a file
+experiment.cleave_proteins()
+experiment.check_sequences_uniqueness()
+experiment.write()  # write the result into a file
 
 # Access the list of sequences
-digestion.peptides
+experiment.peptides
 ```
 
 By default, the peptide sequences returned are at least 7 amino acids long, have a maximum of 1 miscleavage, have a molecular mass under 4600 dalton and result from a tryptic digestion.
@@ -63,7 +77,7 @@ Linux users can run Kiwi from the terminal by typing:
 To show the help message:
 
 ```bash
-$ /path/to/digestion.py -h
+$ kiwi --help
 
   usage: digestion.py [-h] [-l] [-M] [-m] [-a] [-e] [-o] </path/to/file.fasta>
 

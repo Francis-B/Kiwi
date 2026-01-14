@@ -1,13 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# ------------------------------------------------------------------------------
 """
 Dict of the molecular mass (in dalton) of each amino acid.
 Reference: matrixscience.com/help/aa_help.html
 """
 
-# ------------------------------------------------------------------------------
 atom = {
     "H": 1.00782503521,
     "O": 15.9949146221,
@@ -18,7 +13,7 @@ atom = {
     "Se": 79.916522,
 }
 
-aminoAcid = {
+amino_acid = {
     "A": atom["C"] * 3 + atom["H"] * 5 + atom["N"] + atom["O"],
     "R": atom["C"] * 6 + atom["H"] * 12 + atom["N"] * 4 + atom["O"],
     "N": atom["C"] * 4 + atom["H"] * 6 + atom["N"] * 2 + atom["O"] * 2,
