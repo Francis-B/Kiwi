@@ -1,5 +1,9 @@
 # Kiwi: a fast regex-based protein digestion tool
 
+## Author
+
+Francis Bourassa ([Francis-B](https://github.com/Francis-B))
+
 ## Description
 
 Kiwi is a python tool that performs a proteolytic cleavage on proteins from a given fasta and that can determine which obtained peptides are unique.
@@ -27,19 +31,16 @@ pip install -e ./
 
 ## Instructions
 
-To use it, clone or download this repository.
-
-**To run in python script:**
-
-From a script in the Kiwi folder:
+Once install, kiwi can be used **via its API**:
 
 ```python
-from digestion import Digestion
-#-------------------------------------------------------------------------------
 
-fastaFile = '/path/to/file.fasta'
-experiment = Experiment(fastaFile) # Create an instance with default parameters and the
-                                 # protein sequences dictionary
+from kiwi.digestion import Experiment
+
+fasta_file = '/path/to/file.fasta'
+
+# Load fasta and create experiment with default parameters
+experiment = Experiment(fasta_file)
 
 # Change parameters
 experiment.set_min_length(<int>)
@@ -49,10 +50,7 @@ experiment.set_max_miscleavages(<int>)
 experiment.set_outdir(<filepath>)
 experiment.set_enzyme(<str>)  # Implemented enzymes can be found in enzyme.py
 
-# Print parameters
-print(experiment)
-
-# Running
+# Run
 experiment.cleave_proteins()
 experiment.check_sequences_uniqueness()
 experiment.write()  # write the result into a file
@@ -66,20 +64,18 @@ By default, the peptide sequences returned are at least 7 amino acids long, have
 If no directory is passed in digestion.write(), the file is
 automatically saved as /path/to/file.fasta_digestedPeptides.csv.
 
-**To run from command line:**
-
-Linux users can run Kiwi from the terminal by typing:
+Or run **via terminal**:
 
 ```bash
-/path/to/digestion.py /path/to/file.fasta
+kiwi /path/to/file.fasta
 ```
 
 To show the help message:
 
 ```bash
-$ kiwi --help
+$ kiwi --h
 
-  usage: digestion.py [-h] [-l] [-M] [-m] [-a] [-e] [-o] </path/to/file.fasta>
+  usage: kiwi [-h] [-l] [-M] [-m] [-a] [-e] [-o] </path/to/file.fasta>
 
   Digest proteins of a given fasta file
 
@@ -98,7 +94,7 @@ $ kiwi --help
 
 ## Note on unique peptides
 
-This script was mainly developped has a tool for mass spectrometry database preparation. In this context, we consider a peptide sequence as unique if no other proteins yield the **exact** same sequence after enzymatic digestion.
+This script was mainly developed has a tool for mass spectrometry database preparation. In this context, we consider a peptide sequence as unique if no other proteins yield the **exact** same sequence after enzymatic digestion.
 
 So, for example, if two given proteins yield respectively the following peptides after a tryptic digestion:
 
